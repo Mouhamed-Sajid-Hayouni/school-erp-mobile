@@ -27,10 +27,17 @@ export default function App() {
       const data = await response.json();
 
       if (response.ok) {
+        if (data.role !== 'STUDENT' && data.role !== 'PARENT') {
+          Alert.alert(
+            'Mobile Access Limited',
+            'The mobile app currently supports only Student and Parent accounts.'
+          );
+          return;
+        }
         await AsyncStorage.setItem('token', data.token);
         await AsyncStorage.setItem('role', data.role);
         setUserRole(data.role);
-        setIsLoggedIn(true); 
+        setIsLoggedIn(true);
       } else {
         Alert.alert('Login Failed', data.error || 'Invalid credentials');
       }
@@ -60,7 +67,15 @@ export default function App() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      if (!data.error) setPortalData(data);
+      if (!response.ok) {
+        Alert.alert(
+          "Access Restricted",
+          data.error || "This mobile app is only available for students and parents."
+        );
+        await handleLogout();
+        return;
+      }
+      setPortalData(data);
     } catch (error) {
       Alert.alert("Error", "Failed to load your school data.");
     } finally {
