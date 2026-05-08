@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -54,6 +55,7 @@ type StudentPortalShape = {
   user?: {
     firstName?: string;
     lastName?: string;
+    profileImage?: string | null;
   };
   class?: {
     name?: string;
@@ -76,6 +78,45 @@ type SubjectAverage = {
   average: number;
   count: number;
 };
+
+function getProfileImageUrl(profileImage?: string | null) {
+  if (!profileImage) return null;
+
+  if (profileImage.startsWith('http://') || profileImage.startsWith('https://')) {
+    return profileImage;
+  }
+
+  return `${API_URL}${profileImage}`;
+}
+
+function getInitials(firstName?: string, lastName?: string) {
+  const first = firstName?.trim()?.[0] ?? '';
+  const last = lastName?.trim()?.[0] ?? '';
+  const initials = `${first}${last}`.trim();
+
+  return initials || '?';
+}
+
+function StudentAvatar({ student }: { student: StudentPortalShape }) {
+  const imageUrl = getProfileImageUrl(student?.user?.profileImage);
+  const initials = getInitials(student?.user?.firstName, student?.user?.lastName);
+
+  if (imageUrl) {
+    return (
+      <Image
+        source={{ uri: imageUrl }}
+        style={styles.avatarImage}
+        resizeMode="cover"
+      />
+    );
+  }
+
+  return (
+    <View style={styles.avatarFallback}>
+      <Text style={styles.avatarInitials}>{initials}</Text>
+    </View>
+  );
+}
 
 function computeSubjectAverages(grades: PortalGrade[]): SubjectAverage[] {
   const grouped = new Map<string, number[]>();
@@ -235,47 +276,47 @@ export default function App() {
     }
   };
 
-  const handleLogout = async () => {
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('role');
-    setPortalData(null);
-    setIsLoggedIn(false);
-  };
+  const handleLogout = useCallback(async () => {
+  await AsyncStorage.removeItem('token');
+  await AsyncStorage.removeItem('role');
+  setPortalData(null);
+  setIsLoggedIn(false);
+}, []);
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchMyData();
+const fetchMyData = useCallback(async () => {
+  setIsLoadingData(true);
+
+  try {
+    const token = await AsyncStorage.getItem('token');
+
+    const response = await fetch(`${API_URL}/api/my-portal`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      Alert.alert(
+        'Access Restricted',
+        data.error || 'This mobile app is only available for students and parents.'
+      );
+      await handleLogout();
+      return;
     }
-  }, [isLoggedIn]);
 
-  const fetchMyData = async () => {
-    setIsLoadingData(true);
+    setPortalData(data);
+  } catch {
+    Alert.alert('Error', 'Failed to load your school data.');
+  } finally {
+    setIsLoadingData(false);
+  }
+}, [handleLogout]);
 
-    try {
-      const token = await AsyncStorage.getItem('token');
-
-      const response = await fetch(`${API_URL}/api/my-portal`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        Alert.alert(
-          'Access Restricted',
-          data.error || 'This mobile app is only available for students and parents.'
-        );
-        await handleLogout();
-        return;
-      }
-
-      setPortalData(data);
-    } catch {
-      Alert.alert('Error', 'Failed to load your school data.');
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
+useEffect(() => {
+  if (isLoggedIn) {
+    fetchMyData();
+  }
+}, [isLoggedIn, fetchMyData]);
 
   const renderStudentView = (student: StudentPortalShape) => {
     const fullName =
@@ -287,12 +328,21 @@ export default function App() {
     const grades = student?.grades ?? [];
     const attendances = student?.attendances ?? [];
     const absences = attendances.filter((a) => a?.status === 'ABSENT');
-    const summary = computeSummary(grades, attendances);
 
     return (
       <View key={student?.id ?? fullName} style={styles.studentSection}>
         <View style={styles.studentHeader}>
-          <Text style={styles.studentName}>{fullName}</Text>
+          <View style={styles.studentIdentity}>
+            <StudentAvatar student={student} />
+
+            <View style={styles.studentTextBlock}>
+              <Text style={styles.studentName}>{fullName}</Text>
+              <Text style={styles.profileImageStatus}>
+                {student?.user?.profileImage ? 'Profile image uploaded' : 'No profile image'}
+              </Text>
+            </View>
+          </View>
+
           <View style={styles.classBadge}>
             <Text style={styles.classBadgeText}>{className}</Text>
           </View>
@@ -589,21 +639,58 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   studentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-    paddingBottom: 15,
-  },
-  studentName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#111827',
-    flex: 1,
-    paddingRight: 10,
-  },
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 20,
+  borderBottomWidth: 1,
+  borderBottomColor: '#f3f4f6',
+  paddingBottom: 15,
+  gap: 12,
+},
+studentIdentity: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flex: 1,
+  minWidth: 0,
+},
+studentTextBlock: {
+  flex: 1,
+  paddingRight: 10,
+},
+avatarImage: {
+  width: 52,
+  height: 52,
+  borderRadius: 26,
+  marginRight: 12,
+  backgroundColor: '#e5e7eb',
+  borderWidth: 2,
+  borderColor: '#dbeafe',
+},
+avatarFallback: {
+  width: 52,
+  height: 52,
+  borderRadius: 26,
+  marginRight: 12,
+  backgroundColor: '#2563eb',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+avatarInitials: {
+  color: '#fff',
+  fontSize: 17,
+  fontWeight: 'bold',
+},
+studentName: {
+  fontSize: 20,
+  fontWeight: 'bold',
+  color: '#111827',
+},
+profileImageStatus: {
+  fontSize: 12,
+  color: '#64748b',
+  marginTop: 3,
+},
   classBadge: {
     backgroundColor: '#dbeafe',
     paddingHorizontal: 10,
