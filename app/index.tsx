@@ -336,15 +336,19 @@ useEffect(() => {
             <StudentAvatar student={student} />
 
             <View style={styles.studentTextBlock}>
-              <Text style={styles.studentName}>{fullName}</Text>
-              <Text style={styles.profileImageStatus}>
-                {student?.user?.profileImage ? 'Profile image uploaded' : 'No profile image'}
+              <Text style={styles.studentName} numberOfLines={2}>
+                {fullName}
+              </Text>
+              <Text style={styles.profileImageStatus} numberOfLines={1}>
+                {student?.user?.profileImage ? 'Image uploaded' : 'No profile image'}
               </Text>
             </View>
           </View>
 
           <View style={styles.classBadge}>
-            <Text style={styles.classBadgeText}>{className}</Text>
+            <Text style={styles.classBadgeText} numberOfLines={2}>
+              {className}
+            </Text>
           </View>
         </View>
 
@@ -638,69 +642,68 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 2,
   },
-  studentHeader: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 20,
-  borderBottomWidth: 1,
-  borderBottomColor: '#f3f4f6',
-  paddingBottom: 15,
-  gap: 12,
-},
-studentIdentity: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  flex: 1,
-  minWidth: 0,
-},
-studentTextBlock: {
-  flex: 1,
-  paddingRight: 10,
-},
-avatarImage: {
-  width: 52,
-  height: 52,
-  borderRadius: 26,
-  marginRight: 12,
-  backgroundColor: '#e5e7eb',
-  borderWidth: 2,
-  borderColor: '#dbeafe',
-},
-avatarFallback: {
-  width: 52,
-  height: 52,
-  borderRadius: 26,
-  marginRight: 12,
-  backgroundColor: '#2563eb',
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-avatarInitials: {
-  color: '#fff',
-  fontSize: 17,
-  fontWeight: 'bold',
-},
-studentName: {
-  fontSize: 20,
-  fontWeight: 'bold',
-  color: '#111827',
-},
-profileImageStatus: {
-  fontSize: 12,
-  color: '#64748b',
-  marginTop: 3,
-},
+    studentHeader: {
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    paddingBottom: 15,
+  },
+  studentIdentity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 12,
+  },
+  studentTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  avatarImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    marginRight: 12,
+    backgroundColor: '#e5e7eb',
+    borderWidth: 2,
+    borderColor: '#dbeafe',
+  },
+  avatarFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    marginRight: 12,
+    backgroundColor: '#2563eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitials: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+  studentName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#111827',
+    lineHeight: 30,
+  },
+  profileImageStatus: {
+    fontSize: 13,
+    color: '#64748b',
+    marginTop: 4,
+  },
   classBadge: {
     backgroundColor: '#dbeafe',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
   },
   classBadgeText: {
     color: '#1d4ed8',
-    fontWeight: 'bold',
-    fontSize: 12,
+    fontWeight: '600',
+    fontSize: 14,
   },
 
   sectionCard: {
