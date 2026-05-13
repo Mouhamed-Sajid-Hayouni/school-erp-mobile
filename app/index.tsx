@@ -118,11 +118,38 @@ function StudentAvatar({ student }: { student: StudentPortalShape }) {
   );
 }
 
+
+function translateDay(value?: string) {
+  if (!value) return '';
+
+  const normalized = value.toLowerCase();
+
+  if (normalized === 'monday' || normalized === 'lundi') return '\u0627\u0644\u0625\u062b\u0646\u064a\u0646';
+  if (normalized === 'tuesday' || normalized === 'mardi') return '\u0627\u0644\u062b\u0644\u0627\u062b\u0627\u0621';
+  if (normalized === 'wednesday' || normalized === 'mercredi') return '\u0627\u0644\u0623\u0631\u0628\u0639\u0627\u0621';
+  if (normalized === 'thursday' || normalized === 'jeudi') return '\u0627\u0644\u062e\u0645\u064a\u0633';
+  if (normalized === 'friday' || normalized === 'vendredi') return '\u0627\u0644\u062c\u0645\u0639\u0629';
+  if (normalized === 'saturday' || normalized === 'samedi') return '\u0627\u0644\u0633\u0628\u062a';
+  if (normalized === 'sunday' || normalized === 'dimanche') return '\u0627\u0644\u0623\u062d\u062f';
+
+  return value;
+}
+
+function translateAttendanceStatus(status?: string) {
+  if (!status) return '-';
+
+  if (status === 'PRESENT') return '\u062d\u0627\u0636\u0631';
+  if (status === 'ABSENT') return '\u063a\u0627\u0626\u0628';
+  if (status === 'LATE') return '\u0645\u062a\u0623\u062e\u0631';
+
+  return status;
+}
+
 function computeSubjectAverages(grades: PortalGrade[]): SubjectAverage[] {
   const grouped = new Map<string, number[]>();
 
   for (const grade of grades) {
-    const subjectName = grade.subject?.name ?? 'Unknown Subject';
+    const subjectName = grade.subject?.name ?? 'لا يوجد قسم';
     const current = grouped.get(subjectName) ?? [];
     current.push(grade.score);
     grouped.set(subjectName, current);
@@ -170,19 +197,19 @@ function SummaryCards({
 
   const cards = [
     {
-      label: 'General Average',
+      label: 'المعدل العام',
       value: summary.average !== null ? summary.average.toFixed(2) : '-',
     },
     {
-      label: 'Best Score',
+      label: 'أفضل عدد',
       value: summary.bestScore !== null ? `${summary.bestScore.toFixed(2)}/20` : '-',
     },
     {
-      label: 'Grades Count',
+      label: 'عدد الأعداد',
       value: String(summary.gradesCount),
     },
     {
-      label: 'Absences',
+      label: 'الغيابات',
       value: String(summary.absences),
     },
   ];
@@ -204,10 +231,10 @@ function SubjectAverageSection({ grades }: { grades: PortalGrade[] }) {
 
   return (
     <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>ðŸ“Š Subject Averages</Text>
+      <Text style={styles.sectionTitle}>معدلات المواد</Text>
 
       {subjectAverages.length === 0 ? (
-        <Text style={styles.emptyText}>No subject averages available yet.</Text>
+        <Text style={styles.emptyText}>لا توجد معدلات مواد متوفرة بعد.</Text>
       ) : (
         subjectAverages.map((item) => (
           <View key={item.subjectName} style={styles.averageCard}>
@@ -218,7 +245,7 @@ function SubjectAverageSection({ grades }: { grades: PortalGrade[] }) {
               </View>
             </View>
             <Text style={styles.averageMeta}>
-              Ø§Ø¹ØªÙ…Ø§Ø¯Ù‹Ø§ Ø¹Ù„Ù‰ {item.count} Ø¹Ø¯Ø¯
+              اعتمادًا على {item.count} عدد
             </Text>
           </View>
         ))
@@ -256,8 +283,8 @@ export default function App() {
       if (response.ok) {
         if (data.role !== 'PARENT') {
           Alert.alert(
-            'ÙˆØµÙˆÙ„ Ù…Ø±ÙÙˆØ¶',
-            'ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„Ù‡Ø§ØªÙ Ù…Ø®ØµØµ Ù„Ø­Ø³Ø§Ø¨ Ø§Ù„ÙˆÙ„ÙŠ ÙÙ‚Ø·.'
+            'وصول مرفوض',
+            'تطبيق الهاتف مخصص لحساب الولي فقط.'
           );
           return;
         }
@@ -296,10 +323,7 @@ const fetchMyData = useCallback(async () => {
     const data = await response.json();
 
     if (!response.ok) {
-      Alert.alert(
-        'ÙˆØµÙˆÙ„ Ù…Ø±ÙÙˆØ¶',
-        data.error || 'ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„Ù‡Ø§ØªÙ Ù…Ø®ØµØµ Ù„Ø­Ø³Ø§Ø¨ Ø§Ù„ÙˆÙ„ÙŠ ÙÙ‚Ø·.'
-      );
+      Alert.alert('وصول مرفوض', data.error || 'تطبيق الهاتف مخصص لحساب الولي فقط.');
       await handleLogout();
       return;
     }
@@ -354,7 +378,7 @@ useEffect(() => {
 
         <SummaryCards grades={grades} attendances={attendances} />
 
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>ðŸ—“ï¸ Weekly Timetable</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>جدول الأوقات الأسبوعي</Text>
         {!student?.class || schedules.length === 0 ? (
           <Text style={styles.emptyText}>لا توجد حصص مبرمجة بعد.</Text>
         ) : (
@@ -363,7 +387,7 @@ useEffect(() => {
               const teacherLastName =
                 sched?.teacher?.user?.lastName ??
                 sched?.teacher?.user?.firstName ??
-                'Teacher';
+                'أستاذ';
 
               return (
                 <View
@@ -371,14 +395,14 @@ useEffect(() => {
                   style={styles.scheduleCard}
                 >
                   <View style={styles.scheduleDayTime}>
-                    <Text style={styles.scheduleDay}>{sched?.dayOfWeek ?? '-'}</Text>
+                    <Text style={styles.scheduleDay}>{translateDay(sched?.dayOfWeek) || '-'}</Text>
                     <Text style={styles.scheduleTime}>
                       {sched?.startTime ?? '-'} - {sched?.endTime ?? '-'}
                     </Text>
                   </View>
                   <View style={styles.scheduleDetails}>
-                    <Text style={styles.subjectName}>{sched?.subject?.name ?? 'Subject'}</Text>
-                    <Text style={styles.teacherName}>Prof. {teacherLastName}</Text>
+                    <Text style={styles.subjectName}>{sched?.subject?.name ?? 'لا يوجد قسم'}</Text>
+                    <Text style={styles.teacherName}>أستاذ {teacherLastName}</Text>
                   </View>
                 </View>
               );
@@ -390,14 +414,14 @@ useEffect(() => {
           <SubjectAverageSection grades={grades} />
         </View>
 
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>ðŸ“š Recent Grades</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>آخر الأعداد</Text>
         {grades.length === 0 ? (
-          <Text style={styles.emptyText}>No grades published yet.</Text>
+          <Text style={styles.emptyText}>لا توجد أعداد منشورة بعد.</Text>
         ) : (
           grades.map((g) => (
             <View key={g?.id ?? `${g?.subject?.name}-${g?.examType}`} style={styles.gradeCard}>
               <View style={{ flex: 1, paddingRight: 12 }}>
-                <Text style={styles.subjectName}>{g?.subject?.name ?? 'Subject'}</Text>
+                <Text style={styles.subjectName}>{g?.subject?.name ?? 'لا يوجد قسم'}</Text>
                 <Text style={styles.examType}>{g?.examType ?? '-'}</Text>
                 {g?.comments ? <Text style={styles.commentText}>{g.comments}</Text> : null}
               </View>
@@ -408,14 +432,14 @@ useEffect(() => {
           ))
         )}
 
-        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>âš ï¸ Absences</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>الغيابات</Text>
         {absences.length === 0 ? (
-          <Text style={styles.emptyText}>Perfect attendance! ðŸŽ‰</Text>
+          <Text style={styles.emptyText}>لا توجد غيابات.</Text>
         ) : (
           absences.map((a) => (
             <View key={a?.id ?? `${a?.date}-${a?.status}`} style={styles.absenceCard}>
               <Text style={styles.absenceSubject}>
-                {a?.schedule?.subject?.name ?? 'Subject'}
+                {a?.schedule?.subject?.name ?? 'لا يوجد قسم'}
               </Text>
               <Text style={styles.absenceDate}>
                 {a?.date ? new Date(a.date).toLocaleDateString() : '-'}
@@ -426,14 +450,14 @@ useEffect(() => {
 
         {attendances.length > 0 ? (
           <>
-            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>ðŸ“ Attendance Records</Text>
+            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>سجلات الحضور والغياب</Text>
             {attendances.map((a) => (
               <View key={`${a.id}-record`} style={styles.attendanceCard}>
                 <Text style={styles.attendanceSubject}>
-                  {a?.schedule?.subject?.name ?? 'Subject'}
+                  {a?.schedule?.subject?.name ?? 'لا يوجد قسم'}
                 </Text>
                 <Text style={styles.attendanceMeta}>
-                  {a?.date ? new Date(a.date).toLocaleDateString() : '-'} â€¢ {a.status}
+                  {a?.date ? new Date(a.date).toLocaleDateString() : '-'} • {translateAttendanceStatus(a.status)}
                 </Text>
               </View>
             ))}
@@ -447,7 +471,7 @@ useEffect(() => {
     return (
       <View style={styles.dashboardContainer}>
         <View style={styles.navbar}>
-          <Text style={styles.navTitle}>My School</Text>
+          <Text style={styles.navTitle}>بوابة الولي</Text>
           <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
             <Text style={styles.logoutBtnText}>خروج</Text>
           </TouchableOpacity>
@@ -465,7 +489,7 @@ useEffect(() => {
               <View>
                 <Text style={styles.parentWelcome}>مرحبا بك في بوابة الولي</Text>
                 {((portalData as ParentPortalResponse)?.children ?? []).length === 0 ? (
-                  <Text style={styles.emptyText}>No children linked to your account.</Text>
+                  <Text style={styles.emptyText}>لا يوجد أبناء مرتبطون بحساب هذا الولي.</Text>
                 ) : (
                   ((portalData as ParentPortalResponse)?.children ?? []).map((child) =>
                     renderStudentView(child)
@@ -503,7 +527,7 @@ useEffect(() => {
           <Text style={styles.label}>كلمة المرور</Text>
           <TextInput
             style={styles.input}
-            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+            placeholder="••••••••"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
