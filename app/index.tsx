@@ -217,7 +217,7 @@ function computeSubjectAverages(grades: PortalGrade[]): SubjectAverage[] {
   const grouped = new Map<string, number[]>();
 
   for (const grade of grades) {
-    const subjectName = grade.subject?.name ?? 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù‚Ø³Ù…';
+    const subjectName = grade.subject?.name ?? 'لا يوجد قسم';
     const current = grouped.get(subjectName) ?? [];
     current.push(grade.score);
     grouped.set(subjectName, current);
@@ -265,19 +265,19 @@ function SummaryCards({
 
   const cards = [
     {
-      label: 'Ø§Ù„Ù…Ø¹Ø¯Ù„ Ø§Ù„Ø¹Ø§Ù…',
+      label: 'المعدل العام',
       value: summary.average !== null ? summary.average.toFixed(2) : '-',
     },
     {
-      label: 'Ø£ÙØ¶Ù„ Ø¹Ø¯Ø¯',
+      label: 'أفضل عدد',
       value: summary.bestScore !== null ? `${summary.bestScore.toFixed(2)}/20` : '-',
     },
     {
-      label: 'Ø¹Ø¯Ø¯ Ø§Ù„Ø£Ø¹Ø¯Ø§Ø¯',
+      label: 'عدد الأعداد',
       value: String(summary.gradesCount),
     },
     {
-      label: 'Ø§Ù„ØºÙŠØ§Ø¨Ø§Øª',
+      label: 'الغيابات',
       value: String(summary.absences),
     },
   ];
@@ -299,10 +299,10 @@ function SubjectAverageSection({ grades }: { grades: PortalGrade[] }) {
 
   return (
     <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>Ù…Ø¹Ø¯Ù„Ø§Øª Ø§Ù„Ù…ÙˆØ§Ø¯</Text>
+      <Text style={styles.sectionTitle}>معدلات المواد</Text>
 
       {subjectAverages.length === 0 ? (
-        <Text style={styles.emptyText}>Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø¹Ø¯Ù„Ø§Øª Ù…ÙˆØ§Ø¯ Ù…ØªÙˆÙØ±Ø© Ø¨Ø¹Ø¯.</Text>
+        <Text style={styles.emptyText}>لا توجد معدلات مواد متوفرة بعد.</Text>
       ) : (
         subjectAverages.map((item) => (
           <View key={item.subjectName} style={styles.averageCard}>
@@ -349,8 +349,8 @@ export default function App() {
       if (response.ok) {
         if (data.role !== 'PARENT') {
           Alert.alert(
-            'ÙˆØµÙˆÙ„ Ù…Ø±ÙÙˆØ¶',
-            'ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„Ù‡Ø§ØªÙ Ù…Ø®ØµØµ Ù„Ø­Ø³Ø§Ø¨ Ø§Ù„ÙˆÙ„ÙŠ ÙÙ‚Ø·.'
+            'وصول مرفوض',
+            'تطبيق الهاتف مخصص لحساب الولي فقط.'
           );
           return;
         }
@@ -389,7 +389,7 @@ const fetchMyData = useCallback(async () => {
     const data = await response.json();
 
     if (!response.ok) {
-      Alert.alert('ÙˆØµÙˆÙ„ Ù…Ø±ÙÙˆØ¶', data.error || 'ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„Ù‡Ø§ØªÙ Ù…Ø®ØµØµ Ù„Ø­Ø³Ø§Ø¨ Ø§Ù„ÙˆÙ„ÙŠ ÙÙ‚Ø·.');
+      Alert.alert('وصول مرفوض', data.error || 'تطبيق الهاتف مخصص لحساب الولي فقط.');
       await handleLogout();
       return;
     }
@@ -411,9 +411,9 @@ useEffect(() => {
   const renderStudentView = (student: StudentPortalShape) => {
     const fullName =
       `${student?.user?.firstName ?? ''} ${student?.user?.lastName ?? ''}`.trim() ||
-      'Ø§Ù„Ø§Ø¨Ù†';
+      'الابن';
 
-    const className = student?.class?.name || 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù‚Ø³Ù…';
+    const className = student?.class?.name || 'لا يوجد قسم';
     const schedules = student?.class?.schedules ?? [];
     const grades = student?.grades ?? [];
     const attendances = student?.attendances ?? [];
@@ -430,7 +430,7 @@ useEffect(() => {
                 {fullName}
               </Text>
               <Text style={styles.profileImageStatus} numberOfLines={1}>
-                {student?.user?.profileImage ? 'ØªÙ… Ø±ÙØ¹ Ø§Ù„ØµÙˆØ±Ø©' : 'Ù„Ø§ ØªÙˆØ¬Ø¯ ØµÙˆØ±Ø©'}
+                {student?.user?.profileImage ? 'تم رفع الصورة' : 'لا توجد صورة'}
               </Text>
             </View>
           </View>
@@ -444,16 +444,16 @@ useEffect(() => {
 
         <SummaryCards grades={grades} attendances={attendances} />
 
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Ø¬Ø¯ÙˆÙ„ Ø§Ù„Ø£ÙˆÙ‚Ø§Øª Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹ÙŠ</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>جدول الأوقات الأسبوعي</Text>
         {!student?.class || schedules.length === 0 ? (
-          <Text style={styles.emptyText}>Ù„Ø§ ØªÙˆØ¬Ø¯ Ø­ØµØµ Ù…Ø¨Ø±Ù…Ø¬Ø© Ø¨Ø¹Ø¯.</Text>
+          <Text style={styles.emptyText}>لا توجد حصص مبرمجة بعد.</Text>
         ) : (
           <View style={styles.scheduleContainer}>
             {schedules.map((sched) => {
               const teacherLastName =
                 sched?.teacher?.user?.lastName ??
                 sched?.teacher?.user?.firstName ??
-                'Ø£Ø³ØªØ§Ø°';
+                'أستاذ';
 
               return (
                 <View
@@ -467,8 +467,8 @@ useEffect(() => {
                     </Text>
                   </View>
                   <View style={styles.scheduleDetails}>
-                    <Text style={styles.subjectName}>{sched?.subject?.name ?? 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù‚Ø³Ù…'}</Text>
-                    <Text style={styles.teacherName}>Ø£Ø³ØªØ§Ø° {teacherLastName}</Text>
+                    <Text style={styles.subjectName}>{sched?.subject?.name ?? 'لا يوجد قسم'}</Text>
+                    <Text style={styles.teacherName}>أستاذ {teacherLastName}</Text>
                   </View>
                 </View>
               );
@@ -480,14 +480,14 @@ useEffect(() => {
           <SubjectAverageSection grades={grades} />
         </View>
 
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Ø¢Ø®Ø± Ø§Ù„Ø£Ø¹Ø¯Ø§Ø¯</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>آخر الأعداد</Text>
         {grades.length === 0 ? (
-          <Text style={styles.emptyText}>Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ø¹Ø¯Ø§Ø¯ Ù…Ù†Ø´ÙˆØ±Ø© Ø¨Ø¹Ø¯.</Text>
+          <Text style={styles.emptyText}>لا توجد أعداد منشورة بعد.</Text>
         ) : (
           grades.map((g) => (
             <View key={g?.id ?? `${g?.subject?.name}-${g?.examType}`} style={styles.gradeCard}>
               <View style={{ flex: 1, paddingRight: 12 }}>
-                <Text style={styles.subjectName}>{g?.subject?.name ?? 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù‚Ø³Ù…'}</Text>
+                <Text style={styles.subjectName}>{g?.subject?.name ?? 'لا يوجد قسم'}</Text>
                 <Text style={styles.examType}>{translateExamType(g?.examType)}</Text>
                 {g?.comments ? <Text style={styles.commentText}>{translateGradeComment(g.comments)}</Text> : null}
               </View>
@@ -498,14 +498,14 @@ useEffect(() => {
           ))
         )}
 
-        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Ø§Ù„ØºÙŠØ§Ø¨Ø§Øª</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>الغيابات</Text>
         {absences.length === 0 ? (
-          <Text style={styles.emptyText}>Ù„Ø§ ØªÙˆØ¬Ø¯ ØºÙŠØ§Ø¨Ø§Øª.</Text>
+          <Text style={styles.emptyText}>لا توجد غيابات.</Text>
         ) : (
           absences.map((a) => (
             <View key={a?.id ?? `${a?.date}-${a?.status}`} style={styles.absenceCard}>
               <Text style={styles.absenceSubject}>
-                {a?.schedule?.subject?.name ?? 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù‚Ø³Ù…'}
+                {a?.schedule?.subject?.name ?? 'لا يوجد قسم'}
               </Text>
               <Text style={styles.absenceDate}>
                 {a?.date ? new Date(a.date).toLocaleDateString() : '-'}
@@ -516,14 +516,14 @@ useEffect(() => {
 
         {attendances.length > 0 ? (
           <>
-            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Ø³Ø¬Ù„Ø§Øª Ø§Ù„Ø­Ø¶ÙˆØ± ÙˆØ§Ù„ØºÙŠØ§Ø¨</Text>
+            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>سجلات الحضور والغياب</Text>
             {attendances.map((a) => (
               <View key={`${a.id}-record`} style={styles.attendanceCard}>
                 <Text style={styles.attendanceSubject}>
-                  {a?.schedule?.subject?.name ?? 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù‚Ø³Ù…'}
+                  {a?.schedule?.subject?.name ?? 'لا يوجد قسم'}
                 </Text>
                 <Text style={styles.attendanceMeta}>
-                  {a?.date ? new Date(a.date).toLocaleDateString() : '-'} â€¢ {translateAttendanceStatus(a.status)}
+                  {a?.date ? new Date(a.date).toLocaleDateString() : '-'} • {translateAttendanceStatus(a.status)}
                 </Text>
               </View>
             ))}
@@ -537,25 +537,25 @@ useEffect(() => {
     return (
       <View style={styles.dashboardContainer}>
         <View style={styles.navbar}>
-          <Text style={styles.navTitle}>Ø¨ÙˆØ§Ø¨Ø© Ø§Ù„ÙˆÙ„ÙŠ</Text>
+          <Text style={styles.navTitle}>بوابة الولي</Text>
           <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-            <Text style={styles.logoutBtnText}>Ø®Ø±ÙˆØ¬</Text>
+            <Text style={styles.logoutBtnText}>خروج</Text>
           </TouchableOpacity>
         </View>
 
         {isLoadingData || !portalData ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#2563eb" />
-            <Text style={styles.loadingText}>Ø¬Ø§Ø±Ù ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª...</Text>
+            <Text style={styles.loadingText}>جارٍ تحميل البيانات...</Text>
           </View>
         ) : (
           <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
 
             {userRole === 'PARENT' && (
               <View>
-                <Text style={styles.parentWelcome}>Ù…Ø±Ø­Ø¨Ø§ Ø¨Ùƒ ÙÙŠ Ø¨ÙˆØ§Ø¨Ø© Ø§Ù„ÙˆÙ„ÙŠ</Text>
+                <Text style={styles.parentWelcome}>مرحبا بك في بوابة الولي</Text>
                 {((portalData as ParentPortalResponse)?.children ?? []).length === 0 ? (
-                  <Text style={styles.emptyText}>Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø£Ø¨Ù†Ø§Ø¡ Ù…Ø±ØªØ¨Ø·ÙˆÙ† Ø¨Ø­Ø³Ø§Ø¨ Ù‡Ø°Ø§ Ø§Ù„ÙˆÙ„ÙŠ.</Text>
+                  <Text style={styles.emptyText}>لا يوجد أبناء مرتبطون بحساب هذا الولي.</Text>
                 ) : (
                   ((portalData as ParentPortalResponse)?.children ?? []).map((child) =>
                     renderStudentView(child)
@@ -575,10 +575,10 @@ useEffect(() => {
     <View style={styles.container}>
       <View style={styles.loginBox}>
         <Text style={styles.title}>School ERP</Text>
-        <Text style={styles.subtitle}>Ø¨ÙˆØ§Ø¨Ø© Ø§Ù„ÙˆÙ„ÙŠ</Text>
+        <Text style={styles.subtitle}>بوابة الولي</Text>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ</Text>
+          <Text style={styles.label}>البريد الإلكتروني</Text>
           <TextInput
             style={styles.input}
             placeholder="parent@school.com"
@@ -590,10 +590,10 @@ useEffect(() => {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±</Text>
+          <Text style={styles.label}>كلمة المرور</Text>
           <TextInput
             style={styles.input}
-            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+            placeholder="••••••••"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -604,7 +604,7 @@ useEffect(() => {
           {isLoggingIn ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Ø¯Ø®ÙˆÙ„</Text>
+            <Text style={styles.buttonText}>دخول</Text>
           )}
         </TouchableOpacity>
       </View>
