@@ -204,7 +204,7 @@ function SubjectAverageSection({ grades }: { grades: PortalGrade[] }) {
 
   return (
     <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>📊 Subject Averages</Text>
+      <Text style={styles.sectionTitle}>ðŸ“Š Subject Averages</Text>
 
       {subjectAverages.length === 0 ? (
         <Text style={styles.emptyText}>No subject averages available yet.</Text>
@@ -218,7 +218,7 @@ function SubjectAverageSection({ grades }: { grades: PortalGrade[] }) {
               </View>
             </View>
             <Text style={styles.averageMeta}>
-              Based on {item.count} grade{item.count > 1 ? 's' : ''}
+              Ø§Ø¹ØªÙ…Ø§Ø¯Ù‹Ø§ Ø¹Ù„Ù‰ {item.count} Ø¹Ø¯Ø¯
             </Text>
           </View>
         ))
@@ -254,10 +254,10 @@ export default function App() {
       const data = await response.json();
 
       if (response.ok) {
-        if (data.role !== 'STUDENT' && data.role !== 'PARENT') {
+        if (data.role !== 'PARENT') {
           Alert.alert(
-            'Mobile Access Limited',
-            'The mobile app currently supports only Student and Parent accounts.'
+            'ÙˆØµÙˆÙ„ Ù…Ø±ÙÙˆØ¶',
+            'ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„Ù‡Ø§ØªÙ Ù…Ø®ØµØµ Ù„Ø­Ø³Ø§Ø¨ Ø§Ù„ÙˆÙ„ÙŠ ÙÙ‚Ø·.'
           );
           return;
         }
@@ -297,8 +297,8 @@ const fetchMyData = useCallback(async () => {
 
     if (!response.ok) {
       Alert.alert(
-        'Access Restricted',
-        data.error || 'This mobile app is only available for students and parents.'
+        'ÙˆØµÙˆÙ„ Ù…Ø±ÙÙˆØ¶',
+        data.error || 'ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„Ù‡Ø§ØªÙ Ù…Ø®ØµØµ Ù„Ø­Ø³Ø§Ø¨ Ø§Ù„ÙˆÙ„ÙŠ ÙÙ‚Ø·.'
       );
       await handleLogout();
       return;
@@ -321,9 +321,9 @@ useEffect(() => {
   const renderStudentView = (student: StudentPortalShape) => {
     const fullName =
       `${student?.user?.firstName ?? ''} ${student?.user?.lastName ?? ''}`.trim() ||
-      'Student';
+      'الابن';
 
-    const className = student?.class?.name || 'No Class';
+    const className = student?.class?.name || 'لا يوجد قسم';
     const schedules = student?.class?.schedules ?? [];
     const grades = student?.grades ?? [];
     const attendances = student?.attendances ?? [];
@@ -340,7 +340,7 @@ useEffect(() => {
                 {fullName}
               </Text>
               <Text style={styles.profileImageStatus} numberOfLines={1}>
-                {student?.user?.profileImage ? 'Image uploaded' : 'No profile image'}
+                {student?.user?.profileImage ? 'تم رفع الصورة' : 'لا توجد صورة'}
               </Text>
             </View>
           </View>
@@ -354,9 +354,9 @@ useEffect(() => {
 
         <SummaryCards grades={grades} attendances={attendances} />
 
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>🗓️ Weekly Timetable</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>ðŸ—“ï¸ Weekly Timetable</Text>
         {!student?.class || schedules.length === 0 ? (
-          <Text style={styles.emptyText}>No classes scheduled yet.</Text>
+          <Text style={styles.emptyText}>لا توجد حصص مبرمجة بعد.</Text>
         ) : (
           <View style={styles.scheduleContainer}>
             {schedules.map((sched) => {
@@ -390,7 +390,7 @@ useEffect(() => {
           <SubjectAverageSection grades={grades} />
         </View>
 
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>📚 Recent Grades</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>ðŸ“š Recent Grades</Text>
         {grades.length === 0 ? (
           <Text style={styles.emptyText}>No grades published yet.</Text>
         ) : (
@@ -408,9 +408,9 @@ useEffect(() => {
           ))
         )}
 
-        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>⚠️ Absences</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>âš ï¸ Absences</Text>
         {absences.length === 0 ? (
-          <Text style={styles.emptyText}>Perfect attendance! 🎉</Text>
+          <Text style={styles.emptyText}>Perfect attendance! ðŸŽ‰</Text>
         ) : (
           absences.map((a) => (
             <View key={a?.id ?? `${a?.date}-${a?.status}`} style={styles.absenceCard}>
@@ -426,14 +426,14 @@ useEffect(() => {
 
         {attendances.length > 0 ? (
           <>
-            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>📝 Attendance Records</Text>
+            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>ðŸ“ Attendance Records</Text>
             {attendances.map((a) => (
               <View key={`${a.id}-record`} style={styles.attendanceCard}>
                 <Text style={styles.attendanceSubject}>
                   {a?.schedule?.subject?.name ?? 'Subject'}
                 </Text>
                 <Text style={styles.attendanceMeta}>
-                  {a?.date ? new Date(a.date).toLocaleDateString() : '-'} • {a.status}
+                  {a?.date ? new Date(a.date).toLocaleDateString() : '-'} â€¢ {a.status}
                 </Text>
               </View>
             ))}
@@ -449,22 +449,21 @@ useEffect(() => {
         <View style={styles.navbar}>
           <Text style={styles.navTitle}>My School</Text>
           <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-            <Text style={styles.logoutBtnText}>Logout</Text>
+            <Text style={styles.logoutBtnText}>خروج</Text>
           </TouchableOpacity>
         </View>
 
         {isLoadingData || !portalData ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#2563eb" />
-            <Text style={styles.loadingText}>Loading your data...</Text>
+            <Text style={styles.loadingText}>جارٍ تحميل البيانات...</Text>
           </View>
         ) : (
           <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
-            {userRole === 'STUDENT' && renderStudentView(portalData as StudentPortalShape)}
 
             {userRole === 'PARENT' && (
               <View>
-                <Text style={styles.parentWelcome}>Welcome to the Parent Portal</Text>
+                <Text style={styles.parentWelcome}>مرحبا بك في بوابة الولي</Text>
                 {((portalData as ParentPortalResponse)?.children ?? []).length === 0 ? (
                   <Text style={styles.emptyText}>No children linked to your account.</Text>
                 ) : (
@@ -486,13 +485,13 @@ useEffect(() => {
     <View style={styles.container}>
       <View style={styles.loginBox}>
         <Text style={styles.title}>School ERP</Text>
-        <Text style={styles.subtitle}>Mobile Portal</Text>
+        <Text style={styles.subtitle}>بوابة الولي</Text>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email Address</Text>
+          <Text style={styles.label}>البريد الإلكتروني</Text>
           <TextInput
             style={styles.input}
-            placeholder="student@school.com"
+            placeholder="parent@school.com"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -501,10 +500,10 @@ useEffect(() => {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Password</Text>
+          <Text style={styles.label}>كلمة المرور</Text>
           <TextInput
             style={styles.input}
-            placeholder="••••••••"
+            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -515,7 +514,7 @@ useEffect(() => {
           {isLoggingIn ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
+            <Text style={styles.buttonText}>دخول</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -890,3 +889,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+
