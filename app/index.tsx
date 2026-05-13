@@ -148,9 +148,9 @@ function translateAttendanceStatus(status?: string) {
 
 
 function formatGradeCount(count: number) {
-  if (count === 1) return '???????? ??? ??? ????';
-  if (count === 2) return '???????? ??? ?????';
-  return `???????? ??? ${count} ?????`;
+  if (count === 1) return '\u0627\u0639\u062a\u0645\u0627\u062f\u064b\u0627 \u0639\u0644\u0649 \u0639\u062f\u062f \u0648\u0627\u062d\u062f';
+  if (count === 2) return '\u0627\u0639\u062a\u0645\u0627\u062f\u064b\u0627 \u0639\u0644\u0649 \u0639\u062f\u062f\u064a\u0646';
+  return `\u0627\u0639\u062a\u0645\u0627\u062f\u064b\u0627 \u0639\u0644\u0649 ${count} \u0623\u0639\u062f\u0627\u062f`;
 }
 
 function translateExamType(value?: string | null) {
@@ -312,9 +312,7 @@ function SubjectAverageSection({ grades }: { grades: PortalGrade[] }) {
                 <Text style={styles.scoreText}>{item.average.toFixed(2)}/20</Text>
               </View>
             </View>
-            <Text style={styles.averageMeta}>
-              Ø§Ø¹ØªÙ…Ø§Ø¯Ù‹Ø§ Ø¹Ù„Ù‰ {item.count} Ø¹Ø¯Ø¯
-            </Text>
+            <Text style={styles.averageMeta}>{formatGradeCount(item.count)}</Text>
           </View>
         ))
       )}
