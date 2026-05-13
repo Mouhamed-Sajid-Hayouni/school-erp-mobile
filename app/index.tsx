@@ -195,7 +195,7 @@ function translateGradeComment(value?: string | null) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/?/g, 'e')
+    .replace(/\uFFFD/g, 'e')
     .replace(/\s+/g, ' ')
     .trim();
 
