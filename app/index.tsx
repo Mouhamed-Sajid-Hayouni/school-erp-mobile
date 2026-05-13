@@ -145,6 +145,51 @@ function translateAttendanceStatus(status?: string) {
   return status;
 }
 
+
+function translateExamType(value?: string | null) {
+  const text = String(value ?? '').trim();
+
+  if (!text) return '-';
+
+  const normalized = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/n?/g, 'n')
+    .replace(/n?/g, 'n')
+    .replace(/no\.?/g, 'n')
+    .replace(/\s+/g, ' ');
+
+  if (normalized.includes('grade notification')) return '\u0625\u0634\u0639\u0627\u0631 \u0639\u062f\u062f';
+  if (normalized.includes('devoir notification')) return '\u0625\u0634\u0639\u0627\u0631 \u0639\u062f\u062f';
+  if (normalized.includes('controle') && normalized.includes('1')) return '\u0641\u0631\u0636 \u0645\u0631\u0627\u0642\u0628\u0629 \u0639\u062f\u062f 1';
+  if (normalized.includes('controle') && normalized.includes('2')) return '\u0641\u0631\u0636 \u0645\u0631\u0627\u0642\u0628\u0629 \u0639\u062f\u062f 2';
+  if (normalized.includes('synthese')) return '\u0641\u0631\u0636 \u062a\u0623\u0644\u064a\u0641\u064a';
+  if (normalized === 'devoir 1') return '\u0641\u0631\u0636 \u0639\u062f\u062f 1';
+  if (normalized === 'devoir 2') return '\u0641\u0631\u0636 \u0639\u062f\u062f 2';
+  if (normalized.startsWith('devoir')) return '\u0641\u0631\u0636';
+
+  return text;
+}
+
+function translateGradeComment(value?: string | null) {
+  const text = String(value ?? '').trim();
+
+  if (!text) return '';
+
+  const normalized = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ');
+
+  if (normalized.includes('grade notification test')) return '\u0627\u062e\u062a\u0628\u0627\u0631 \u0625\u0634\u0639\u0627\u0631 \u0627\u0644\u0639\u062f\u062f';
+  if (normalized.includes('tres bon trimestre')) return '\u062b\u0644\u0627\u062b\u064a \u0645\u0645\u062a\u0627\u0632';
+  if (normalized.includes('bon travail')) return '\u0639\u0645\u0644 \u062c\u064a\u062f';
+
+  return text;
+}
+
 function computeSubjectAverages(grades: PortalGrade[]): SubjectAverage[] {
   const grouped = new Map<string, number[]>();
 
@@ -422,8 +467,8 @@ useEffect(() => {
             <View key={g?.id ?? `${g?.subject?.name}-${g?.examType}`} style={styles.gradeCard}>
               <View style={{ flex: 1, paddingRight: 12 }}>
                 <Text style={styles.subjectName}>{g?.subject?.name ?? 'لا يوجد قسم'}</Text>
-                <Text style={styles.examType}>{g?.examType ?? '-'}</Text>
-                {g?.comments ? <Text style={styles.commentText}>{g.comments}</Text> : null}
+                <Text style={styles.examType}>{translateExamType(g?.examType)}</Text>
+                {g?.comments ? <Text style={styles.commentText}>{translateGradeComment(g.comments)}</Text> : null}
               </View>
               <View style={styles.scoreBadge}>
                 <Text style={styles.scoreText}>{g?.score ?? '-'} /20</Text>
