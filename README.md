@@ -48,3 +48,19 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Verification
+
+Before pushing mobile changes, run:
+
+```bash
+npm run verify
+```
+
+This command runs:
+
+- Expo lint
+- Arabic encoding check
+
+The Arabic encoding check helps prevent mojibake markers such as U+00D8, U+00D9, U+00C3, U+00C2, U+00E2, or U+FFFD from appearing in the mobile Arabic interface.
+
