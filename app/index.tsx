@@ -155,19 +155,33 @@ function translateExamType(value?: string | null) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/n?/g, 'n')
-    .replace(/n?/g, 'n')
-    .replace(/no\.?/g, 'n')
-    .replace(/\s+/g, ' ');
+    .replace(/[??]/g, '')
+    .replace(/n\s*[??]?\s*/g, 'n')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-  if (normalized.includes('grade notification')) return '\u0625\u0634\u0639\u0627\u0631 \u0639\u062f\u062f';
-  if (normalized.includes('devoir notification')) return '\u0625\u0634\u0639\u0627\u0631 \u0639\u062f\u062f';
-  if (normalized.includes('controle') && normalized.includes('1')) return '\u0641\u0631\u0636 \u0645\u0631\u0627\u0642\u0628\u0629 \u0639\u062f\u062f 1';
-  if (normalized.includes('controle') && normalized.includes('2')) return '\u0641\u0631\u0636 \u0645\u0631\u0627\u0642\u0628\u0629 \u0639\u062f\u062f 2';
-  if (normalized.includes('synthese')) return '\u0641\u0631\u0636 \u062a\u0623\u0644\u064a\u0641\u064a';
-  if (normalized === 'devoir 1') return '\u0641\u0631\u0636 \u0639\u062f\u062f 1';
-  if (normalized === 'devoir 2') return '\u0641\u0631\u0636 \u0639\u062f\u062f 2';
-  if (normalized.startsWith('devoir')) return '\u0641\u0631\u0636';
+  const compact = normalized.replace(/\s+/g, '');
+
+  if (compact.includes('notification')) {
+    return '\u0625\u0634\u0639\u0627\u0631 \u0639\u062f\u062f';
+  }
+
+  if (compact.includes('synthese') || compact.includes('synthse')) {
+    return '\u0641\u0631\u0636 \u062a\u0623\u0644\u064a\u0641\u064a';
+  }
+
+  if (compact.includes('devoir')) {
+    if (compact.includes('1')) {
+      return '\u0641\u0631\u0636 \u0645\u0631\u0627\u0642\u0628\u0629 \u0639\u062f\u062f 1';
+    }
+
+    if (compact.includes('2')) {
+      return '\u0641\u0631\u0636 \u0645\u0631\u0627\u0642\u0628\u0629 \u0639\u062f\u062f 2';
+    }
+
+    return '\u0641\u0631\u0636';
+  }
 
   return text;
 }
@@ -181,10 +195,12 @@ function translateGradeComment(value?: string | null) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ');
+    .replace(/?/g, 'e')
+    .replace(/\s+/g, ' ')
+    .trim();
 
   if (normalized.includes('grade notification test')) return '\u0627\u062e\u062a\u0628\u0627\u0631 \u0625\u0634\u0639\u0627\u0631 \u0627\u0644\u0639\u062f\u062f';
-  if (normalized.includes('tres bon trimestre')) return '\u062b\u0644\u0627\u062b\u064a \u0645\u0645\u062a\u0627\u0632';
+  if (normalized.includes('tres bon trimestre') || normalized.includes('trs bon trimestre')) return '\u062b\u0644\u0627\u062b\u064a \u0645\u0645\u062a\u0627\u0632';
   if (normalized.includes('bon travail')) return '\u0639\u0645\u0644 \u062c\u064a\u062f';
 
   return text;
