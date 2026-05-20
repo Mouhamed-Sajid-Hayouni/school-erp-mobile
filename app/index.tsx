@@ -12,7 +12,11 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'https://school-erp-api-3l16.onrender.com';
+const API_URL = String(process.env.EXPO_PUBLIC_API_URL || "").replace(/\/+$/, "");
+
+if (!API_URL) {
+  throw new Error("EXPO_PUBLIC_API_URL is missing");
+}
 
 type PortalSchedule = {
   id: string;
