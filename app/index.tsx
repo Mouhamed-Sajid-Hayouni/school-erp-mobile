@@ -54,7 +54,7 @@ type PortalAttendance = {
   };
 };
 
-type StudentPortalShape = {
+type ChildPortalRecord = {
   id?: string;
   user?: {
     firstName?: string;
@@ -72,10 +72,8 @@ type StudentPortalShape = {
 type ParentPortalResponse = {
   id: string;
   userId: string;
-  children?: StudentPortalShape[];
+  children?: ChildPortalRecord[];
 };
-
-type PortalResponse = StudentPortalShape | ParentPortalResponse;
 
 type SubjectAverage = {
   subjectName: string;
@@ -101,9 +99,9 @@ function getInitials(firstName?: string, lastName?: string) {
   return initials || '?';
 }
 
-function StudentAvatar({ student }: { student: StudentPortalShape }) {
-  const imageUrl = getProfileImageUrl(student?.user?.profileImage);
-  const initials = getInitials(student?.user?.firstName, student?.user?.lastName);
+function ChildAvatar({ child }: { child: ChildPortalRecord }) {
+  const imageUrl = getProfileImageUrl(child?.user?.profileImage);
+  const initials = getInitials(child?.user?.firstName, child?.user?.lastName);
 
   if (imageUrl) {
     return (
@@ -331,7 +329,7 @@ export default function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState('');
-  const [portalData, setPortalData] = useState<PortalResponse | null>(null);
+  const [portalData, setPortalData] = useState<ParentPortalResponse | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
   const handleLogin = async () => {
@@ -412,29 +410,29 @@ useEffect(() => {
   }
 }, [isLoggedIn, fetchMyData]);
 
-  const renderStudentView = (student: StudentPortalShape) => {
+  const renderChildRecord = (child: ChildPortalRecord) => {
     const fullName =
-      `${student?.user?.firstName ?? ''} ${student?.user?.lastName ?? ''}`.trim() ||
+      `${child?.user?.firstName ?? ''} ${child?.user?.lastName ?? ''}`.trim() ||
       'الابن';
 
-    const className = student?.class?.name || 'لا يوجد قسم';
-    const schedules = student?.class?.schedules ?? [];
-    const grades = student?.grades ?? [];
-    const attendances = student?.attendances ?? [];
+    const className = child?.class?.name || 'لا يوجد قسم';
+    const schedules = child?.class?.schedules ?? [];
+    const grades = child?.grades ?? [];
+    const attendances = child?.attendances ?? [];
     const absences = attendances.filter((a) => a?.status === 'ABSENT');
 
     return (
-      <View key={student?.id ?? fullName} style={styles.studentSection}>
+      <View key={child?.id ?? fullName} style={styles.studentSection}>
         <View style={styles.studentHeader}>
           <View style={styles.studentIdentity}>
-            <StudentAvatar student={student} />
+            <ChildAvatar child={child} />
 
             <View style={styles.studentTextBlock}>
               <Text style={styles.studentName} numberOfLines={2}>
                 {fullName}
               </Text>
               <Text style={styles.profileImageStatus} numberOfLines={1}>
-                {student?.user?.profileImage ? 'تم رفع الصورة' : 'لا توجد صورة'}
+                {child?.user?.profileImage ? 'تم رفع الصورة' : 'لا توجد صورة'}
               </Text>
             </View>
           </View>
@@ -449,7 +447,7 @@ useEffect(() => {
         <SummaryCards grades={grades} attendances={attendances} />
 
         <Text style={[styles.sectionTitle, { marginTop: 24 }]}>جدول الأوقات الأسبوعي</Text>
-        {!student?.class || schedules.length === 0 ? (
+        {!child?.class || schedules.length === 0 ? (
           <Text style={styles.emptyText}>لا توجد حصص مبرمجة بعد.</Text>
         ) : (
           <View style={styles.scheduleContainer}>
@@ -562,7 +560,7 @@ useEffect(() => {
                   <Text style={styles.emptyText}>لا يوجد أبناء مرتبطون بحساب هذا الولي.</Text>
                 ) : (
                   ((portalData as ParentPortalResponse)?.children ?? []).map((child) =>
-                    renderStudentView(child)
+                    renderChildRecord(child)
                   )
                 )}
               </View>
