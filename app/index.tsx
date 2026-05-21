@@ -422,13 +422,13 @@ useEffect(() => {
     const absences = attendances.filter((a) => a?.status === 'ABSENT');
 
     return (
-      <View key={child?.id ?? fullName} style={styles.studentSection}>
-        <View style={styles.studentHeader}>
-          <View style={styles.studentIdentity}>
+      <View key={child?.id ?? fullName} style={styles.childRecordSection}>
+        <View style={styles.childRecordHeader}>
+          <View style={styles.childRecordIdentity}>
             <ChildAvatar child={child} />
 
-            <View style={styles.studentTextBlock}>
-              <Text style={styles.studentName} numberOfLines={2}>
+            <View style={styles.childRecordTextBlock}>
+              <Text style={styles.childRecordName} numberOfLines={2}>
                 {fullName}
               </Text>
               <Text style={styles.profileImageStatus} numberOfLines={1}>
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  studentSection: {
+  childRecordSection: {
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 16,
@@ -733,19 +733,19 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 2,
   },
-    studentHeader: {
+    childRecordHeader: {
     marginBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
     paddingBottom: 15,
   },
-  studentIdentity: {
+  childRecordIdentity: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
     marginBottom: 12,
   },
-  studentTextBlock: {
+  childRecordTextBlock: {
     flex: 1,
     minWidth: 0,
   },
@@ -772,7 +772,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: 'bold',
   },
-  studentName: {
+  childRecordName: {
     fontSize: 22,
     fontWeight: 'bold',
     color: '#111827',
