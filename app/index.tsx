@@ -75,6 +75,28 @@ type ParentPortalResponse = {
   children?: ChildPortalRecord[];
 };
 
+type ChildEnrollmentRequestRow = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  requestedLevel?: string | null;
+  note?: string | null;
+  status: string;
+  adminNote?: string | null;
+  createdAt?: string;
+  reviewedAt?: string | null;
+  approvedStudent?: {
+    user?: {
+      firstName?: string;
+      lastName?: string;
+    };
+    class?: {
+      name?: string;
+    } | null;
+  } | null;
+};
+
 type SubjectAverage = {
   subjectName: string;
   average: number;
@@ -253,6 +275,21 @@ function computeSummary(grades: PortalGrade[], attendances: PortalAttendance[]) 
   };
 }
 
+function formatMobileDate(value?: string | null) {
+  if (!value) return '-';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString();
+}
+
+function getChildEnrollmentStatusLabel(status?: string) {
+  if (status === 'APPROVED') return 'مقبول';
+  if (status === 'REJECTED') return 'مرفوض';
+  return 'في انتظار المراجعة';
+}
+
 function SummaryCards({
   grades,
   attendances,
@@ -331,6 +368,16 @@ export default function App() {
   const [userRole, setUserRole] = useState('');
   const [portalData, setPortalData] = useState<ParentPortalResponse | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [childEnrollmentRequests, setChildEnrollmentRequests] = useState<ChildEnrollmentRequestRow[]>([]);
+  const [isLoadingChildRequests, setIsLoadingChildRequests] = useState(false);
+  const [isSubmittingChildRequest, setIsSubmittingChildRequest] = useState(false);
+  const [childRequestForm, setChildRequestForm] = useState({
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    requestedLevel: '',
+    note: '',
+  });
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -375,11 +422,13 @@ export default function App() {
   await AsyncStorage.removeItem('token');
   await AsyncStorage.removeItem('role');
   setPortalData(null);
+  setChildEnrollmentRequests([]);
   setIsLoggedIn(false);
 }, []);
 
 const fetchMyData = useCallback(async () => {
   setIsLoadingData(true);
+  setIsLoadingChildRequests(true);
 
   try {
     const token = await AsyncStorage.getItem('token');
@@ -397,18 +446,198 @@ const fetchMyData = useCallback(async () => {
     }
 
     setPortalData(data);
+
+    const requestsResponse = await fetch(`${API_URL}/api/my-child-enrollment-requests`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const requestsData = await requestsResponse.json();
+
+    if (requestsResponse.ok && Array.isArray(requestsData)) {
+      setChildEnrollmentRequests(requestsData);
+    } else {
+      setChildEnrollmentRequests([]);
+    }
   } catch {
     Alert.alert('Error', 'Failed to load your school data.');
   } finally {
     setIsLoadingData(false);
+    setIsLoadingChildRequests(false);
   }
 }, [handleLogout]);
+
+const handleSubmitChildEnrollmentRequest = async () => {
+  const firstName = childRequestForm.firstName.trim();
+  const lastName = childRequestForm.lastName.trim();
+  const dateOfBirth = childRequestForm.dateOfBirth.trim();
+  const requestedLevel = childRequestForm.requestedLevel.trim();
+  const note = childRequestForm.note.trim();
+
+  if (!firstName || !lastName || !dateOfBirth) {
+    Alert.alert('بيانات ناقصة', 'الاسم واللقب وتاريخ الولادة مطلوبة.');
+    return;
+  }
+
+  setIsSubmittingChildRequest(true);
+
+  try {
+    const token = await AsyncStorage.getItem('token');
+
+    const response = await fetch(`${API_URL}/api/child-enrollment-requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        firstName,
+        lastName,
+        dateOfBirth,
+        requestedLevel,
+        note,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      Alert.alert('تعذر إرسال الطلب', data.error || 'حدث خطأ أثناء إرسال طلب تسجيل الابن.');
+      return;
+    }
+
+    setChildRequestForm({
+      firstName: '',
+      lastName: '',
+      dateOfBirth: '',
+      requestedLevel: '',
+      note: '',
+    });
+
+    Alert.alert('تم الإرسال', 'تم إرسال طلب تسجيل الابن إلى إدارة المدرسة.');
+    await fetchMyData();
+  } catch {
+    Alert.alert('Network Error', 'Cannot connect to server.');
+  } finally {
+    setIsSubmittingChildRequest(false);
+  }
+};
 
 useEffect(() => {
   if (isLoggedIn) {
     fetchMyData();
   }
 }, [isLoggedIn, fetchMyData]);
+
+  const renderChildEnrollmentRequestSection = () => (
+    <View style={styles.childRequestSection}>
+      <Text style={styles.sectionTitle}>طلب تسجيل ابن</Text>
+      <Text style={styles.childRequestDescription}>
+        يمكن للولي إرسال طلب تسجيل ابن، وتقوم إدارة المدرسة بمراجعته وتعيين القسم قبل إنشاء الملف الرسمي.
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="اسم الابن"
+        value={childRequestForm.firstName}
+        onChangeText={(value) => setChildRequestForm((prev) => ({ ...prev, firstName: value }))}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="لقب الابن"
+        value={childRequestForm.lastName}
+        onChangeText={(value) => setChildRequestForm((prev) => ({ ...prev, lastName: value }))}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="تاريخ الولادة: YYYY-MM-DD"
+        value={childRequestForm.dateOfBirth}
+        onChangeText={(value) => setChildRequestForm((prev) => ({ ...prev, dateOfBirth: value }))}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="المستوى أو القسم المطلوب"
+        value={childRequestForm.requestedLevel}
+        onChangeText={(value) => setChildRequestForm((prev) => ({ ...prev, requestedLevel: value }))}
+      />
+
+      <TextInput
+        style={[styles.input, styles.childRequestTextArea]}
+        placeholder="ملاحظات اختيارية"
+        multiline
+        value={childRequestForm.note}
+        onChangeText={(value) => setChildRequestForm((prev) => ({ ...prev, note: value }))}
+      />
+
+      <TouchableOpacity
+        style={[styles.button, isSubmittingChildRequest ? styles.disabledButton : null]}
+        onPress={handleSubmitChildEnrollmentRequest}
+        disabled={isSubmittingChildRequest}
+      >
+        {isSubmittingChildRequest ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>إرسال طلب التسجيل</Text>
+        )}
+      </TouchableOpacity>
+
+      <Text style={[styles.sectionTitle, { marginTop: 22 }]}>طلبات التسجيل</Text>
+
+      {isLoadingChildRequests ? (
+        <Text style={styles.emptyText}>جاري تحميل طلبات التسجيل...</Text>
+      ) : childEnrollmentRequests.length === 0 ? (
+        <Text style={styles.emptyText}>لا توجد طلبات تسجيل أبناء بعد.</Text>
+      ) : (
+        childEnrollmentRequests.map((request) => {
+          const statusStyle =
+            request.status === 'APPROVED'
+              ? styles.childRequestStatusApproved
+              : request.status === 'REJECTED'
+                ? styles.childRequestStatusRejected
+                : styles.childRequestStatusPending;
+
+          return (
+            <View key={request.id} style={styles.childRequestCard}>
+              <View style={styles.childRequestHeader}>
+                <Text style={styles.childRequestName}>
+                  {request.firstName} {request.lastName}
+                </Text>
+                <Text style={[styles.childRequestStatus, statusStyle]}>
+                  {getChildEnrollmentStatusLabel(request.status)}
+                </Text>
+              </View>
+
+              <Text style={styles.childRequestMeta}>
+                تاريخ الولادة: {formatMobileDate(request.dateOfBirth)}
+              </Text>
+
+              <Text style={styles.childRequestMeta}>
+                المستوى المطلوب: {request.requestedLevel || 'غير محدد'}
+              </Text>
+
+              {request.note ? (
+                <Text style={styles.childRequestMeta}>ملاحظة: {request.note}</Text>
+              ) : null}
+
+              {request.adminNote ? (
+                <Text style={styles.childRequestMeta}>رد الإدارة: {request.adminNote}</Text>
+              ) : null}
+
+              {request.approvedStudent ? (
+                <Text style={styles.childRequestApprovedText}>
+                  تم إنشاء ملف التلميذ: {request.approvedStudent.user?.firstName}{' '}
+                  {request.approvedStudent.user?.lastName}
+                  {request.approvedStudent.class?.name ? ` - ${request.approvedStudent.class.name}` : ''}
+                </Text>
+              ) : null}
+            </View>
+          );
+        })
+      )}
+    </View>
+  );
 
   const renderChildRecord = (child: ChildPortalRecord) => {
     const fullName =
@@ -556,6 +785,8 @@ useEffect(() => {
             {userRole === 'PARENT' && (
               <View>
                 <Text style={styles.parentWelcome}>مرحبا بك في بوابة الولي</Text>
+                {renderChildEnrollmentRequestSection()}
+
                 {((portalData as ParentPortalResponse)?.children ?? []).length === 0 ? (
                   <Text style={styles.emptyText}>لا يوجد أبناء مرتبطون بحساب هذا الولي.</Text>
                 ) : (
@@ -980,5 +1211,85 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginTop: 4,
   },
+  childRequestSection: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  childRequestDescription: {
+    color: '#64748b',
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 16,
+    textAlign: 'right',
+  },
+  childRequestTextArea: {
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+  disabledButton: {
+    opacity: 0.65,
+  },
+  childRequestCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 10,
+  },
+  childRequestHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  childRequestName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#111827',
+    flex: 1,
+  },
+  childRequestStatus: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  childRequestStatusPending: {
+    color: '#92400e',
+    backgroundColor: '#fef3c7',
+  },
+  childRequestStatusApproved: {
+    color: '#047857',
+    backgroundColor: '#d1fae5',
+  },
+  childRequestStatusRejected: {
+    color: '#b91c1c',
+    backgroundColor: '#fee2e2',
+  },
+  childRequestMeta: {
+    color: '#475569',
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 3,
+    textAlign: 'right',
+  },
+  childRequestApprovedText: {
+    color: '#047857',
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 8,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+
 });
 
