@@ -11,6 +11,8 @@ import {
   Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 const API_URL = String(process.env.EXPO_PUBLIC_API_URL || "").replace(/\/+$/, "");
 
@@ -289,6 +291,228 @@ function getChildEnrollmentStatusLabel(status?: string) {
   if (status === 'REJECTED') return 'مرفوض';
   return 'في انتظار المراجعة';
 }
+
+
+function escapeHtml(value?: string | number | null) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatPdfDate(value?: string | null) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("fr-FR");
+}
+
+function buildMobileBulletinHtml(child: ChildPortalRecord) {
+  const fullName =
+    `${child?.user?.firstName ?? ""} ${child?.user?.lastName ?? ""}`.trim() ||
+    "الابن";
+
+  const className = child?.class?.name || "لا يوجد قسم";
+  const grades = child?.grades ?? [];
+  const attendances = child?.attendances ?? [];
+  const absences = attendances.filter((item) => item?.status === "ABSENT");
+  const subjectAverages = computeSubjectAverages(grades);
+  const average =
+    grades.length > 0
+      ? (grades.reduce((sum, grade) => sum + Number(grade.score ?? 0), 0) / grades.length).toFixed(2)
+      : "-";
+
+  const gradeRows =
+    grades.length > 0
+      ? grades
+          .map(
+            (grade) => `
+              <tr>
+                <td>${escapeHtml(grade?.subject?.name ?? "لا يوجد قسم")}</td>
+                <td>${escapeHtml(translateExamType(grade?.examType))}</td>
+                <td>${escapeHtml(Number(grade?.score ?? 0).toFixed(2))}/20</td>
+                <td>${escapeHtml(grade?.comments ? translateGradeComment(grade.comments) : "-")}</td>
+              </tr>
+            `
+          )
+          .join("")
+      : '<tr><td colspan="4">لا توجد أعداد منشورة بعد.</td></tr>';
+
+  const averageRows =
+    subjectAverages.length > 0
+      ? subjectAverages
+          .map(
+            (item) => `
+              <tr>
+                <td>${escapeHtml(item.subjectName)}</td>
+                <td>${escapeHtml(item.average.toFixed(2))}/20</td>
+                <td>${escapeHtml(formatGradeCount(item.count))}</td>
+              </tr>
+            `
+          )
+          .join("")
+      : '<tr><td colspan="3">لا توجد معدلات مواد بعد.</td></tr>';
+
+  const absenceRows =
+    absences.length > 0
+      ? absences
+          .map(
+            (absence) => `
+              <tr>
+                <td>${escapeHtml(absence?.schedule?.subject?.name ?? "لا يوجد قسم")}</td>
+                <td>${escapeHtml(formatPdfDate(absence?.date))}</td>
+                <td>${escapeHtml(translateAttendanceStatus(absence?.status))}</td>
+              </tr>
+            `
+          )
+          .join("")
+      : '<tr><td colspan="3">لا توجد غيابات.</td></tr>';
+
+  return `
+    <!doctype html>
+    <html lang="ar" dir="rtl">
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            color: #111827;
+            padding: 28px;
+            line-height: 1.7;
+          }
+          .header {
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 14px;
+            margin-bottom: 20px;
+          }
+          h1 {
+            margin: 0;
+            color: #1d4ed8;
+            font-size: 24px;
+          }
+          h2 {
+            margin-top: 24px;
+            color: #374151;
+            font-size: 18px;
+          }
+          .meta {
+            color: #64748b;
+            margin-top: 6px;
+          }
+          .summary {
+            display: flex;
+            gap: 12px;
+            margin: 18px 0;
+          }
+          .box {
+            flex: 1;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 10px;
+            background: #eff6ff;
+          }
+          .label {
+            color: #64748b;
+            font-size: 12px;
+          }
+          .value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f172a;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+          }
+          th, td {
+            border: 1px solid #e5e7eb;
+            padding: 8px;
+            text-align: right;
+            font-size: 12px;
+          }
+          th {
+            background: #f8fafc;
+            color: #334155;
+          }
+          .footer {
+            margin-top: 28px;
+            color: #94a3b8;
+            font-size: 11px;
+            text-align: left;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>دفتر الأعداد</h1>
+          <div class="meta">التلميذ: ${escapeHtml(fullName)}</div>
+          <div class="meta">القسم: ${escapeHtml(className)}</div>
+        </div>
+
+        <div class="summary">
+          <div class="box">
+            <div class="label">المعدل العام</div>
+            <div class="value">${escapeHtml(average)}</div>
+          </div>
+          <div class="box">
+            <div class="label">عدد الأعداد</div>
+            <div class="value">${escapeHtml(grades.length)}</div>
+          </div>
+          <div class="box">
+            <div class="label">عدد الغيابات</div>
+            <div class="value">${escapeHtml(absences.length)}</div>
+          </div>
+        </div>
+
+        <h2>معدلات المواد</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>المادة</th>
+              <th>المعدل</th>
+              <th>عدد الأعداد</th>
+            </tr>
+          </thead>
+          <tbody>${averageRows}</tbody>
+        </table>
+
+        <h2>الأعداد</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>المادة</th>
+              <th>نوع التقييم</th>
+              <th>العدد</th>
+              <th>ملاحظة</th>
+            </tr>
+          </thead>
+          <tbody>${gradeRows}</tbody>
+        </table>
+
+        <h2>الغيابات</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>المادة</th>
+              <th>التاريخ</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>${absenceRows}</tbody>
+        </table>
+
+        <div class="footer">تم إنشاء هذا الملف من تطبيق بوابة الولي.</div>
+      </body>
+    </html>
+  `;
+}
+
 
 function SummaryCards({
   grades,
@@ -639,6 +863,37 @@ useEffect(() => {
     </View>
   );
 
+
+  const handleExportBulletin = useCallback(async (child: ChildPortalRecord) => {
+    const fullName =
+      `${child?.user?.firstName ?? ''} ${child?.user?.lastName ?? ''}`.trim() ||
+      'الابن';
+    const childKey = child?.id ?? fullName;
+
+    try {
+      setExportingChildId(childKey);
+
+      const html = buildMobileBulletinHtml(child);
+      const result = await Print.printToFileAsync({ html });
+
+      const canShare = await Sharing.isAvailableAsync();
+
+      if (canShare) {
+        await Sharing.shareAsync(result.uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'دفتر الأعداد PDF',
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        Alert.alert('تم إنشاء ملف PDF', result.uri);
+      }
+    } catch {
+      Alert.alert('تعذر استخراج PDF', 'تعذر إنشاء أو مشاركة دفتر الأعداد.');
+    } finally {
+      setExportingChildId(null);
+    }
+  }, []);
+
   const renderChildRecord = (child: ChildPortalRecord) => {
     const fullName =
       `${child?.user?.firstName ?? ''} ${child?.user?.lastName ?? ''}`.trim() ||
@@ -649,6 +904,8 @@ useEffect(() => {
     const grades = child?.grades ?? [];
     const attendances = child?.attendances ?? [];
     const absences = attendances.filter((a) => a?.status === 'ABSENT');
+    const childKey = child?.id ?? fullName;
+    const isExporting = exportingChildId === childKey;
 
     return (
       <View key={child?.id ?? fullName} style={styles.childRecordSection}>
@@ -672,6 +929,16 @@ useEffect(() => {
             </Text>
           </View>
         </View>
+
+        <TouchableOpacity
+          onPress={() => handleExportBulletin(child)}
+          disabled={isExporting}
+          style={[styles.exportPdfButton, isExporting ? styles.disabledButton : null]}
+        >
+          <Text style={styles.exportPdfButtonText}>
+            {isExporting ? 'جاري إعداد PDF...' : 'استخراج دفتر الأعداد PDF'}
+          </Text>
+        </TouchableOpacity>
 
         <SummaryCards grades={grades} attendances={attendances} />
 
@@ -1068,6 +1335,21 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 15,
   },
+  exportPdfButton: {
+    marginTop: 14,
+    marginBottom: 16,
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+  },
+  exportPdfButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+
   emptyText: {
     color: '#9ca3af',
     fontStyle: 'italic',
