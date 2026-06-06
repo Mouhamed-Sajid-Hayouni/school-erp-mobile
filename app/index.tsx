@@ -603,6 +603,8 @@ export default function App() {
     note: '',
   });
 
+  const [exportingChildId, setExportingChildId] = useState<string | null>(null);
+
   const handleLogin = async () => {
     if (!email || !password) {
       return Alert.alert('Error', 'Please fill in all fields');
