@@ -99,6 +99,45 @@ type ChildEnrollmentRequestRow = {
   } | null;
 };
 
+type MessageUserSummary = {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  role?: string | null;
+};
+
+type MobileMessage = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  body: string;
+  createdAt?: string;
+  sender?: MessageUserSummary;
+};
+
+type MobileConversationParticipant = {
+  id: string;
+  conversationId: string;
+  userId: string;
+  lastReadAt?: string | null;
+  user?: MessageUserSummary;
+};
+
+type MobileConversationListItem = {
+  id: string;
+  title?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  participants?: MobileConversationParticipant[];
+  lastMessage?: MobileMessage | null;
+  unreadCount?: number;
+};
+
+type MobileConversationDetails = MobileConversationListItem & {
+  messages?: MobileMessage[];
+};
+
 type SubjectAverage = {
   subjectName: string;
   average: number;
@@ -121,6 +160,45 @@ function getInitials(firstName?: string, lastName?: string) {
   const initials = `${first}${last}`.trim();
 
   return initials || '?';
+}
+
+function formatMessageUserName(user?: MessageUserSummary | null) {
+  const fullName = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim();
+
+  return fullName || user?.email || '\u0645\u0633\u062a\u062e\u062f\u0645';
+}
+
+function getMessageRoleLabel(role?: string | null) {
+  if (role === 'ADMIN') return '\u0625\u062f\u0627\u0631\u0629';
+  if (role === 'TEACHER') return '\u0623\u0633\u062a\u0627\u0630';
+  if (role === 'PARENT') return '\u0648\u0644\u064a';
+
+  return role || '-';
+}
+
+function formatMessageDateTime(value?: string | null) {
+  if (!value) return '-';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString('fr-FR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  });
+}
+
+function getConversationTitle(conversation?: MobileConversationListItem | null) {
+  const title = conversation?.title?.trim();
+
+  if (title) return title;
+
+  const participants = conversation?.participants ?? [];
+  const names = participants
+    .map((participant) => formatMessageUserName(participant.user))
+    .filter(Boolean);
+
+  return names.join(' · ') || '\u0645\u062d\u0627\u062f\u062b\u0629';
 }
 
 function ChildAvatar({ child }: { child: ChildPortalRecord }) {
@@ -604,6 +682,16 @@ export default function App() {
   });
 
   const [exportingChildId, setExportingChildId] = useState<string | null>(null);
+  const [messageRecipients, setMessageRecipients] = useState<MessageUserSummary[]>([]);
+  const [messageConversations, setMessageConversations] = useState<MobileConversationListItem[]>([]);
+  const [selectedConversationId, setSelectedConversationId] = useState('');
+  const [selectedConversation, setSelectedConversation] = useState<MobileConversationDetails | null>(null);
+  const [selectedRecipientId, setSelectedRecipientId] = useState('');
+  const [newConversationMessage, setNewConversationMessage] = useState('');
+  const [replyMessage, setReplyMessage] = useState('');
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -649,6 +737,13 @@ export default function App() {
   await AsyncStorage.removeItem('role');
   setPortalData(null);
   setChildEnrollmentRequests([]);
+  setMessageRecipients([]);
+  setMessageConversations([]);
+  setSelectedConversationId('');
+  setSelectedConversation(null);
+  setSelectedRecipientId('');
+  setNewConversationMessage('');
+  setReplyMessage('');
   setIsLoggedIn(false);
 }, []);
 
@@ -748,11 +843,157 @@ const handleSubmitChildEnrollmentRequest = async () => {
   }
 };
 
+const fetchMobileMessages = useCallback(async () => {
+  setIsLoadingMessages(true);
+
+  try {
+    const token = await AsyncStorage.getItem('token');
+
+    const [recipientsResponse, conversationsResponse] = await Promise.all([
+      fetch(`${API_URL}/api/messages/recipients`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      fetch(`${API_URL}/api/messages/conversations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
+
+    const recipientsData = await recipientsResponse.json();
+    const conversationsData = await conversationsResponse.json();
+
+    setMessageRecipients(recipientsResponse.ok && Array.isArray(recipientsData) ? recipientsData : []);
+    setMessageConversations(
+      conversationsResponse.ok && Array.isArray(conversationsData) ? conversationsData : []
+    );
+  } catch {
+    Alert.alert('تعذر تحميل الرسائل', 'تعذر الاتصال بخدمة الرسائل.');
+  } finally {
+    setIsLoadingMessages(false);
+  }
+}, []);
+
+const fetchConversationDetails = useCallback(async (conversationId: string) => {
+  setIsLoadingConversation(true);
+  setSelectedConversationId(conversationId);
+
+  try {
+    const token = await AsyncStorage.getItem('token');
+
+    const response = await fetch(`${API_URL}/api/messages/conversations/${conversationId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      Alert.alert('تعذر فتح المحادثة', data?.error || 'حدث خطأ غير متوقع.');
+      return;
+    }
+
+    setSelectedConversation(data);
+    await fetchMobileMessages();
+  } catch {
+    Alert.alert('تعذر فتح المحادثة', 'تعذر تحميل تفاصيل المحادثة.');
+  } finally {
+    setIsLoadingConversation(false);
+  }
+}, [fetchMobileMessages]);
+
+const createMobileConversation = async () => {
+  const cleanMessage = newConversationMessage.trim();
+
+  if (!selectedRecipientId) {
+    Alert.alert('اختر مستلمًا', 'اختر شخصًا لبدء المحادثة.');
+    return;
+  }
+
+  if (!cleanMessage) {
+    Alert.alert('الرسالة مطلوبة', 'اكتب رسالة قبل الإرسال.');
+    return;
+  }
+
+  setIsSendingMessage(true);
+
+  try {
+    const token = await AsyncStorage.getItem('token');
+
+    const response = await fetch(`${API_URL}/api/messages/conversations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        participantIds: [selectedRecipientId],
+        message: cleanMessage,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      Alert.alert('تعذر بدء المحادثة', data?.error || 'حدث خطأ غير متوقع.');
+      return;
+    }
+
+    setSelectedRecipientId('');
+    setNewConversationMessage('');
+
+    await fetchMobileMessages();
+
+    if (data?.conversation?.id) {
+      await fetchConversationDetails(data.conversation.id);
+    }
+  } catch {
+    Alert.alert('خطأ شبكة', 'تعذر إرسال الرسالة.');
+  } finally {
+    setIsSendingMessage(false);
+  }
+};
+
+const sendMobileReply = async () => {
+  const cleanMessage = replyMessage.trim();
+
+  if (!selectedConversationId || !cleanMessage) {
+    return;
+  }
+
+  setIsSendingMessage(true);
+
+  try {
+    const token = await AsyncStorage.getItem('token');
+
+    const response = await fetch(`${API_URL}/api/messages/conversations/${selectedConversationId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ body: cleanMessage }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      Alert.alert('تعذر إرسال الرسالة', data?.error || 'حدث خطأ غير متوقع.');
+      return;
+    }
+
+    setReplyMessage('');
+    await fetchConversationDetails(selectedConversationId);
+  } catch {
+    Alert.alert('خطأ شبكة', 'تعذر إرسال الرسالة.');
+  } finally {
+    setIsSendingMessage(false);
+  }
+};
+
 useEffect(() => {
   if (isLoggedIn) {
     fetchMyData();
+    fetchMobileMessages();
   }
-}, [isLoggedIn, fetchMyData]);
+}, [isLoggedIn, fetchMyData, fetchMobileMessages]);
 
   const renderChildEnrollmentRequestSection = () => (
     <View style={styles.childRequestSection}>
@@ -865,6 +1106,142 @@ useEffect(() => {
     </View>
   );
 
+
+  const renderMessagesSection = () => (
+    <View style={styles.messagesSection}>
+      <View style={styles.messagesHeader}>
+        <Text style={styles.sectionTitle}>\u0627\u0644\u0631\u0633\u0627\u0626\u0644</Text>
+        <TouchableOpacity onPress={fetchMobileMessages} style={styles.refreshMessagesButton}>
+          <Text style={styles.refreshMessagesText}>\u062a\u062d\u062f\u064a\u062b</Text>
+        </TouchableOpacity>
+      </View>
+
+      {isLoadingMessages ? (
+        <Text style={styles.emptyText}>\u062c\u0627\u0631\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0631\u0633\u0627\u0626\u0644...</Text>
+      ) : null}
+
+      <Text style={styles.messagesSubTitle}>\u0628\u062f\u0621 \u0645\u062d\u0627\u062f\u062b\u0629</Text>
+
+      {messageRecipients.length === 0 ? (
+        <Text style={styles.emptyText}>\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0633\u062a\u0644\u0645\u0648\u0646 \u0645\u062a\u0627\u062d\u0648\u0646.</Text>
+      ) : (
+        <View style={styles.recipientList}>
+          {messageRecipients.map((recipient) => {
+            const isSelected = selectedRecipientId === recipient.id;
+
+            return (
+              <TouchableOpacity
+                key={recipient.id}
+                onPress={() => setSelectedRecipientId(recipient.id)}
+                style={[styles.recipientChip, isSelected ? styles.recipientChipSelected : null]}
+              >
+                <Text style={[styles.recipientName, isSelected ? styles.recipientNameSelected : null]}>
+                  {formatMessageUserName(recipient)}
+                </Text>
+                <Text style={[styles.recipientRole, isSelected ? styles.recipientNameSelected : null]}>
+                  {getMessageRoleLabel(recipient.role)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+      <TextInput
+        style={[styles.input, styles.messageTextArea]}
+        placeholder="\u0627\u0643\u062a\u0628 \u0631\u0633\u0627\u0644\u0629 \u062c\u062f\u064a\u062f\u0629"
+        multiline
+        value={newConversationMessage}
+        onChangeText={setNewConversationMessage}
+      />
+
+      <TouchableOpacity
+        onPress={createMobileConversation}
+        disabled={isSendingMessage || !selectedRecipientId || !newConversationMessage.trim()}
+        style={[
+          styles.messagePrimaryButton,
+          isSendingMessage || !selectedRecipientId || !newConversationMessage.trim()
+            ? styles.disabledButton
+            : null,
+        ]}
+      >
+        <Text style={styles.messagePrimaryButtonText}>
+          {isSendingMessage ? '\u062c\u0627\u0631\u064a \u0627\u0644\u0625\u0631\u0633\u0627\u0644...' : '\u0625\u0631\u0633\u0627\u0644 \u0645\u062d\u0627\u062f\u062b\u0629'}
+        </Text>
+      </TouchableOpacity>
+
+      <Text style={styles.messagesSubTitle}>\u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0627\u062a</Text>
+
+      {messageConversations.length === 0 ? (
+        <Text style={styles.emptyText}>\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u062d\u0627\u062f\u062b\u0627\u062a \u0628\u0639\u062f.</Text>
+      ) : (
+        messageConversations.map((conversation) => {
+          const isSelected = selectedConversationId === conversation.id;
+
+          return (
+            <TouchableOpacity
+              key={conversation.id}
+              onPress={() => fetchConversationDetails(conversation.id)}
+              style={[styles.conversationCard, isSelected ? styles.conversationCardSelected : null]}
+            >
+              <View style={styles.conversationCardHeader}>
+                <Text style={styles.conversationTitle} numberOfLines={1}>
+                  {getConversationTitle(conversation)}
+                </Text>
+                {Number(conversation.unreadCount ?? 0) > 0 ? (
+                  <Text style={styles.unreadBadge}>{conversation.unreadCount}</Text>
+                ) : null}
+              </View>
+              <Text style={styles.conversationPreview} numberOfLines={2}>
+                {conversation.lastMessage?.body || '\u0627\u0641\u062a\u062d \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0629'}
+              </Text>
+            </TouchableOpacity>
+          );
+        })
+      )}
+
+      {isLoadingConversation ? (
+        <Text style={styles.emptyText}>\u062c\u0627\u0631\u064a \u0641\u062a\u062d \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0629...</Text>
+      ) : selectedConversation ? (
+        <View style={styles.conversationDetailsBox}>
+          <Text style={styles.conversationDetailsTitle}>{getConversationTitle(selectedConversation)}</Text>
+
+          {(selectedConversation.messages ?? []).length === 0 ? (
+            <Text style={styles.emptyText}>\u0644\u0627 \u062a\u0648\u062c\u062f \u0631\u0633\u0627\u0626\u0644 \u062f\u0627\u062e\u0644 \u0647\u0630\u0647 \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0629.</Text>
+          ) : (
+            (selectedConversation.messages ?? []).map((message) => (
+              <View key={message.id} style={styles.messageBubble}>
+                <Text style={styles.messageSender}>{formatMessageUserName(message.sender)}</Text>
+                <Text style={styles.messageDate}>{formatMessageDateTime(message.createdAt)}</Text>
+                <Text style={styles.messageBody}>{message.body}</Text>
+              </View>
+            ))
+          )}
+
+          <TextInput
+            style={[styles.input, styles.messageTextArea]}
+            placeholder="\u0627\u0643\u062a\u0628 \u0631\u062f\u064b\u0627"
+            multiline
+            value={replyMessage}
+            onChangeText={setReplyMessage}
+          />
+
+          <TouchableOpacity
+            onPress={sendMobileReply}
+            disabled={isSendingMessage || !replyMessage.trim()}
+            style={[
+              styles.messagePrimaryButton,
+              isSendingMessage || !replyMessage.trim() ? styles.disabledButton : null,
+            ]}
+          >
+            <Text style={styles.messagePrimaryButtonText}>
+              {isSendingMessage ? '\u062c\u0627\u0631\u064a \u0627\u0644\u0625\u0631\u0633\u0627\u0644...' : '\u0625\u0631\u0633\u0627\u0644 \u0631\u062f'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+    </View>
+  );
 
   const handleExportBulletin = useCallback(async (child: ChildPortalRecord) => {
     const fullName =
@@ -1055,6 +1432,7 @@ useEffect(() => {
               <View>
                 <Text style={styles.parentWelcome}>مرحبا بك في بوابة الولي</Text>
                 {renderChildEnrollmentRequestSection()}
+                {renderMessagesSection()}
 
                 {((portalData as ParentPortalResponse)?.children ?? []).length === 0 ? (
                   <Text style={styles.emptyText}>لا يوجد أبناء مرتبطون بحساب هذا الولي.</Text>
@@ -1350,6 +1728,166 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+
+  messagesSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  messagesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  refreshMessagesButton: {
+    backgroundColor: '#e0f2fe',
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  refreshMessagesText: {
+    color: '#0369a1',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  messagesSubTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#475569',
+    marginTop: 14,
+    marginBottom: 10,
+  },
+  recipientList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  recipientChip: {
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+  },
+  recipientChipSelected: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  recipientName: {
+    color: '#0f172a',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  recipientRole: {
+    color: '#64748b',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  recipientNameSelected: {
+    color: '#ffffff',
+  },
+  messageTextArea: {
+    minHeight: 82,
+    textAlignVertical: 'top',
+  },
+  messagePrimaryButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  messagePrimaryButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+  },
+  conversationCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 8,
+  },
+  conversationCardSelected: {
+    borderColor: '#2563eb',
+    backgroundColor: '#eff6ff',
+  },
+  conversationCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  conversationTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  unreadBadge: {
+    minWidth: 24,
+    textAlign: 'center',
+    backgroundColor: '#dc2626',
+    color: '#ffffff',
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    overflow: 'hidden',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  conversationPreview: {
+    color: '#64748b',
+    marginTop: 6,
+    fontSize: 13,
+  },
+  conversationDetailsBox: {
+    marginTop: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+  },
+  conversationDetailsTitle: {
+    fontSize: 15,
+    color: '#1e3a8a',
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  messageBubble: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 8,
+  },
+  messageSender: {
+    color: '#0f172a',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  messageDate: {
+    color: '#94a3b8',
+    fontSize: 11,
+    marginTop: 2,
+    marginBottom: 5,
+  },
+  messageBody: {
+    color: '#334155',
+    fontSize: 13,
+    lineHeight: 20,
   },
 
   emptyText: {
