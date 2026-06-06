@@ -165,13 +165,13 @@ function getInitials(firstName?: string, lastName?: string) {
 function formatMessageUserName(user?: MessageUserSummary | null) {
   const fullName = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim();
 
-  return fullName || user?.email || '\u0645\u0633\u062a\u062e\u062f\u0645';
+  return fullName || user?.email || 'مستخدم';
 }
 
 function getMessageRoleLabel(role?: string | null) {
-  if (role === 'ADMIN') return '\u0625\u062f\u0627\u0631\u0629';
-  if (role === 'TEACHER') return '\u0623\u0633\u062a\u0627\u0630';
-  if (role === 'PARENT') return '\u0648\u0644\u064a';
+  if (role === 'ADMIN') return 'إدارة';
+  if (role === 'TEACHER') return 'أستاذ';
+  if (role === 'PARENT') return 'ولي';
 
   return role || '-';
 }
@@ -198,7 +198,7 @@ function getConversationTitle(conversation?: MobileConversationListItem | null) 
     .map((participant) => formatMessageUserName(participant.user))
     .filter(Boolean);
 
-  return names.join(' · ') || '\u0645\u062d\u0627\u062f\u062b\u0629';
+  return names.join(' · ') || 'محادثة';
 }
 
 function ChildAvatar({ child }: { child: ChildPortalRecord }) {
@@ -228,13 +228,13 @@ function translateDay(value?: string) {
 
   const normalized = value.toLowerCase();
 
-  if (normalized === 'monday' || normalized === 'lundi') return '\u0627\u0644\u0625\u062b\u0646\u064a\u0646';
-  if (normalized === 'tuesday' || normalized === 'mardi') return '\u0627\u0644\u062b\u0644\u0627\u062b\u0627\u0621';
-  if (normalized === 'wednesday' || normalized === 'mercredi') return '\u0627\u0644\u0623\u0631\u0628\u0639\u0627\u0621';
-  if (normalized === 'thursday' || normalized === 'jeudi') return '\u0627\u0644\u062e\u0645\u064a\u0633';
-  if (normalized === 'friday' || normalized === 'vendredi') return '\u0627\u0644\u062c\u0645\u0639\u0629';
-  if (normalized === 'saturday' || normalized === 'samedi') return '\u0627\u0644\u0633\u0628\u062a';
-  if (normalized === 'sunday' || normalized === 'dimanche') return '\u0627\u0644\u0623\u062d\u062f';
+  if (normalized === 'monday' || normalized === 'lundi') return 'الإثنين';
+  if (normalized === 'tuesday' || normalized === 'mardi') return 'الثلاثاء';
+  if (normalized === 'wednesday' || normalized === 'mercredi') return 'الأربعاء';
+  if (normalized === 'thursday' || normalized === 'jeudi') return 'الخميس';
+  if (normalized === 'friday' || normalized === 'vendredi') return 'الجمعة';
+  if (normalized === 'saturday' || normalized === 'samedi') return 'السبت';
+  if (normalized === 'sunday' || normalized === 'dimanche') return 'الأحد';
 
   return value;
 }
@@ -242,9 +242,9 @@ function translateDay(value?: string) {
 function translateAttendanceStatus(status?: string) {
   if (!status) return '-';
 
-  if (status === 'PRESENT') return '\u062d\u0627\u0636\u0631';
-  if (status === 'ABSENT') return '\u063a\u0627\u0626\u0628';
-  if (status === 'LATE') return '\u0645\u062a\u0623\u062e\u0631';
+  if (status === 'PRESENT') return 'حاضر';
+  if (status === 'ABSENT') return 'غائب';
+  if (status === 'LATE') return 'متأخر';
 
   return status;
 }
@@ -252,9 +252,9 @@ function translateAttendanceStatus(status?: string) {
 
 
 function formatGradeCount(count: number) {
-  if (count === 1) return '\u0627\u0639\u062a\u0645\u0627\u062f\u064b\u0627 \u0639\u0644\u0649 \u0639\u062f\u062f \u0648\u0627\u062d\u062f';
-  if (count === 2) return '\u0627\u0639\u062a\u0645\u0627\u062f\u064b\u0627 \u0639\u0644\u0649 \u0639\u062f\u062f\u064a\u0646';
-  return `\u0627\u0639\u062a\u0645\u0627\u062f\u064b\u0627 \u0639\u0644\u0649 ${count} \u0623\u0639\u062f\u0627\u062f`;
+  if (count === 1) return 'اعتمادًا على عدد واحد';
+  if (count === 2) return 'اعتمادًا على عددين';
+  return `اعتمادًا على ${count} أعداد`;
 }
 
 function translateExamType(value?: string | null) {
@@ -275,23 +275,23 @@ function translateExamType(value?: string | null) {
   const compact = normalized.replace(/\s+/g, '');
 
   if (compact.includes('notification')) {
-    return '\u0625\u0634\u0639\u0627\u0631 \u0639\u062f\u062f';
+    return 'إشعار عدد';
   }
 
   if (compact.includes('synthese') || compact.includes('synthse')) {
-    return '\u0641\u0631\u0636 \u062a\u0623\u0644\u064a\u0641\u064a';
+    return 'فرض تأليفي';
   }
 
   if (compact.includes('devoir')) {
     if (compact.includes('1')) {
-      return '\u0641\u0631\u0636 \u0645\u0631\u0627\u0642\u0628\u0629 \u0639\u062f\u062f 1';
+      return 'فرض مراقبة عدد 1';
     }
 
     if (compact.includes('2')) {
-      return '\u0641\u0631\u0636 \u0645\u0631\u0627\u0642\u0628\u0629 \u0639\u062f\u062f 2';
+      return 'فرض مراقبة عدد 2';
     }
 
-    return '\u0641\u0631\u0636';
+    return 'فرض';
   }
 
   return text;
@@ -310,9 +310,9 @@ function translateGradeComment(value?: string | null) {
     .replace(/\s+/g, ' ')
     .trim();
 
-  if (normalized.includes('grade notification test')) return '\u0627\u062e\u062a\u0628\u0627\u0631 \u0625\u0634\u0639\u0627\u0631 \u0627\u0644\u0639\u062f\u062f';
-  if (normalized.includes('tres bon trimestre') || normalized.includes('trs bon trimestre')) return '\u062b\u0644\u0627\u062b\u064a \u0645\u0645\u062a\u0627\u0632';
-  if (normalized.includes('bon travail')) return '\u0639\u0645\u0644 \u062c\u064a\u062f';
+  if (normalized.includes('grade notification test')) return 'اختبار إشعار العدد';
+  if (normalized.includes('tres bon trimestre') || normalized.includes('trs bon trimestre')) return 'ثلاثي ممتاز';
+  if (normalized.includes('bon travail')) return 'عمل جيد';
 
   return text;
 }
@@ -1110,20 +1110,20 @@ useEffect(() => {
   const renderMessagesSection = () => (
     <View style={styles.messagesSection}>
       <View style={styles.messagesHeader}>
-        <Text style={styles.sectionTitle}>\u0627\u0644\u0631\u0633\u0627\u0626\u0644</Text>
+        <Text style={styles.sectionTitle}>الرسائل</Text>
         <TouchableOpacity onPress={fetchMobileMessages} style={styles.refreshMessagesButton}>
-          <Text style={styles.refreshMessagesText}>\u062a\u062d\u062f\u064a\u062b</Text>
+          <Text style={styles.refreshMessagesText}>تحديث</Text>
         </TouchableOpacity>
       </View>
 
       {isLoadingMessages ? (
-        <Text style={styles.emptyText}>\u062c\u0627\u0631\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0631\u0633\u0627\u0626\u0644...</Text>
+        <Text style={styles.emptyText}>جاري تحميل الرسائل...</Text>
       ) : null}
 
-      <Text style={styles.messagesSubTitle}>\u0628\u062f\u0621 \u0645\u062d\u0627\u062f\u062b\u0629</Text>
+      <Text style={styles.messagesSubTitle}>بدء محادثة</Text>
 
       {messageRecipients.length === 0 ? (
-        <Text style={styles.emptyText}>\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0633\u062a\u0644\u0645\u0648\u0646 \u0645\u062a\u0627\u062d\u0648\u0646.</Text>
+        <Text style={styles.emptyText}>لا يوجد مستلمون متاحون.</Text>
       ) : (
         <View style={styles.recipientList}>
           {messageRecipients.map((recipient) => {
@@ -1149,7 +1149,7 @@ useEffect(() => {
 
       <TextInput
         style={[styles.input, styles.messageTextArea]}
-        placeholder="\u0627\u0643\u062a\u0628 \u0631\u0633\u0627\u0644\u0629 \u062c\u062f\u064a\u062f\u0629"
+        placeholder="اكتب رسالة جديدة"
         multiline
         value={newConversationMessage}
         onChangeText={setNewConversationMessage}
@@ -1166,14 +1166,14 @@ useEffect(() => {
         ]}
       >
         <Text style={styles.messagePrimaryButtonText}>
-          {isSendingMessage ? '\u062c\u0627\u0631\u064a \u0627\u0644\u0625\u0631\u0633\u0627\u0644...' : '\u0625\u0631\u0633\u0627\u0644 \u0645\u062d\u0627\u062f\u062b\u0629'}
+          {isSendingMessage ? 'جاري الإرسال...' : 'إرسال محادثة'}
         </Text>
       </TouchableOpacity>
 
-      <Text style={styles.messagesSubTitle}>\u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0627\u062a</Text>
+      <Text style={styles.messagesSubTitle}>المحادثات</Text>
 
       {messageConversations.length === 0 ? (
-        <Text style={styles.emptyText}>\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u062d\u0627\u062f\u062b\u0627\u062a \u0628\u0639\u062f.</Text>
+        <Text style={styles.emptyText}>لا توجد محادثات بعد.</Text>
       ) : (
         messageConversations.map((conversation) => {
           const isSelected = selectedConversationId === conversation.id;
@@ -1193,7 +1193,7 @@ useEffect(() => {
                 ) : null}
               </View>
               <Text style={styles.conversationPreview} numberOfLines={2}>
-                {conversation.lastMessage?.body || '\u0627\u0641\u062a\u062d \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0629'}
+                {conversation.lastMessage?.body || 'افتح المحادثة'}
               </Text>
             </TouchableOpacity>
           );
@@ -1201,13 +1201,13 @@ useEffect(() => {
       )}
 
       {isLoadingConversation ? (
-        <Text style={styles.emptyText}>\u062c\u0627\u0631\u064a \u0641\u062a\u062d \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0629...</Text>
+        <Text style={styles.emptyText}>جاري فتح المحادثة...</Text>
       ) : selectedConversation ? (
         <View style={styles.conversationDetailsBox}>
           <Text style={styles.conversationDetailsTitle}>{getConversationTitle(selectedConversation)}</Text>
 
           {(selectedConversation.messages ?? []).length === 0 ? (
-            <Text style={styles.emptyText}>\u0644\u0627 \u062a\u0648\u062c\u062f \u0631\u0633\u0627\u0626\u0644 \u062f\u0627\u062e\u0644 \u0647\u0630\u0647 \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0629.</Text>
+            <Text style={styles.emptyText}>لا توجد رسائل داخل هذه المحادثة.</Text>
           ) : (
             (selectedConversation.messages ?? []).map((message) => (
               <View key={message.id} style={styles.messageBubble}>
@@ -1220,7 +1220,7 @@ useEffect(() => {
 
           <TextInput
             style={[styles.input, styles.messageTextArea]}
-            placeholder="\u0627\u0643\u062a\u0628 \u0631\u062f\u064b\u0627"
+            placeholder="اكتب ردًا"
             multiline
             value={replyMessage}
             onChangeText={setReplyMessage}
@@ -1235,7 +1235,7 @@ useEffect(() => {
             ]}
           >
             <Text style={styles.messagePrimaryButtonText}>
-              {isSendingMessage ? '\u062c\u0627\u0631\u064a \u0627\u0644\u0625\u0631\u0633\u0627\u0644...' : '\u0625\u0631\u0633\u0627\u0644 \u0631\u062f'}
+              {isSendingMessage ? 'جاري الإرسال...' : 'إرسال رد'}
             </Text>
           </TouchableOpacity>
         </View>
